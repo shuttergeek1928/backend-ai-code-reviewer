@@ -2,29 +2,28 @@ import pymysql
 from app import app
 from config import mysql
 from flask import jsonify
-from flask import flash, request
+from flask import flash, request,session
 from dataconnect import run_code_review
 import datetime as dt
 import json
-from flask import Flask
+import re, hashlib
 from flask_cors import CORS, cross_origin
 
-def store_code_review(empId,inputCode,language,correctedCode,explain,accuracy,raw_res):
+def store_code_review(email,inputCode,language,correctedCode,explain,accuracy,raw_res):
     try:
         conn = mysql.connect()
         cursor = conn.cursor()
         currdate=dt.datetime.now()
         #raw_res="testing"
-        strId=empId
         print(type(currdate))
-        print(type(strId))
+        #print(type(strId))
         print(type(inputCode))
         print(type(language))
         print(type(correctedCode))
         print(type(explain))
         print(type(accuracy))
-        sql_query = "INSERT INTO review (emp_id,language,input,output,time_and_date, explanation, accuracy,raw_response) VALUES(%s, %s, %s, %s,%s, %s, %s, %s)"
-        cursor.execute(sql_query, (strId,language, inputCode,correctedCode,currdate, explain, accuracy, raw_res))
+        sql_query = "INSERT INTO review (email,language,input,output,time_and_date, explanation, accuracy,raw_response) VALUES(%s, %s, %s, %s,%s, %s, %s, %s)"
+        cursor.execute(sql_query, (email,language, inputCode,correctedCode,currdate, explain, accuracy, raw_res))
         conn.commit()
     except Exception as e:
         print(e)
@@ -146,7 +145,7 @@ def delete_emp(id):
 def gpt():
     __json = request.json
     print(request)
-    _id = __json['id']
+    _id = __json['email']
     code=__json['code_input']
     response=run_code_review(code)
     res=response.choices[0].message.content
@@ -156,7 +155,6 @@ def gpt():
 
     try:
         print("testing")
-        _id=int(_id)
         store_code_review(_id,code,json_op['detected_language'],json_op['corrected_code'],json_op['explanation'],json_op['code_accuracy'],res)
 
     except Exception as e:
@@ -171,8 +169,8 @@ def get_review():
         conn = mysql.connect()
         cursor = conn.cursor(pymysql.cursors.DictCursor)
         __json=request.json
-        _id=__json['emp_id']
-        cursor.execute("SELECT * FROM REVIEW WHERE EMP_ID=%s",__id)
+        __id=__json['email']
+        cursor.execute("SELECT * FROM REVIEW WHERE EMAIL=%s",__id)
         reviewrows = cursor.fetchall()
         response = jsonify(reviewrows)
         cursor.close()
@@ -185,39 +183,64 @@ def get_review():
     finally:
         print("review  executed")
 
-@app.route('/login',methods=['GET'])
+@app.route('/login',methods=['POST'])
 def user_auth():
-    __json=request.json
-    _id=_json['emp_id']
-    _password=_json['password']
-    try:
+    if request.method == 'POST' and 'email' in request.form and 'password' in request.form:
+        res={}
+        username = request.form['email']
+        password = request.form['password']
+        hash = password + app.secret_key
+        hash = hashlib.sha1(hash.encode())
+        password = hash.hexdigest()
         conn = mysql.connect()
         cursor = conn.cursor(pymysql.cursors.DictCursor)
-        cursor.execute("SELECT PASSWORD FROM EMP WHERE EMP_ID=%s",__id)
-        emp_res=cursor.fetchOne()
+        sqlQuery="SELECT *FROM USERS WHERE EMAIL=%s AND PASSWORD=%s"
+        cursor.execute(sqlQuery,(username,password))
+        account=cursor.fetchone()
+        cursor.close()
+        conn.close()
+        if account:
+            # Create session data, we can access this data in other routes
+            session['loggedin'] = True
+            session['id'] = account['email']
+            session['username'] = account['password']
+            return {"resp":"logged in Successfully"}
+        else: 
+            return   {"resp":"Invalid Username/Password"}
 
-        emp_res_op=jsonify(emp_res)
-        print(emp_res_op["PASSWORD"])
-        return emp_res
-        #print(res_emp)
-        # if(emp_res):
-        #     if emp_res["PASSWORD"]==__password:
-        #         response = jsonify({"user_auth":"1"})
-        #         response.status_code=200
-        #         return response
-        # else:
-        #     response=jsonify({"user_auth":"0"})
-        #     response.status_code=200
-        #     return response
-           # return ("User not Found"){
+@app.route('/register',methods=['POST'])
+def register():
+
+    try:
+        if request.method == 'POST'  and 'email' in request.form and 'password' in request.form and "firstname" in request.form and "lastname" in request.form:
+            __email=request.form['email']
+            __password=request.form['password']
+            __firstname=request.form['firstname']
+            __lastname=request.form['lastname']
+            conn = mysql.connect()
+            cursor = conn.cursor(pymysql.cursors.DictCursor)
+            cursor.execute('SELECT * FROM users WHERE email = %s', (__email,))
+            account = cursor.fetchone()
+            if account:
+                return {"resp":"Account is Already exists!"}
+               
+            else:
+                hash = __password + app.secret_key
+                hash = hashlib.sha1(hash.encode())
+                password = hash.hexdigest()
+                sqlQuery="INSERT INTO users (firstname, lastname, email,password) values(%s,%s,%s,%s)"
+                __bindData=(__firstname, __lastname,__email,password)
+                cursor.execute(sqlQuery,__bindData)
+                conn.commit()
+                cursor.close()
+                conn.close()
+                return {"resp":"Successfully Registered!!"}
+        elif request.method == 'POST':
+                return {"resp":"Please Fill out the form!!"}
     except Exception as e:
         print(e)
     finally:
-        print("review  executed")
-
-
-
-
+        print("executing Finally")    
 
 
 
