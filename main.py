@@ -185,10 +185,11 @@ def get_review():
 
 @app.route('/login',methods=['POST'])
 def user_auth():
-    if request.method == 'POST' and 'email' in request.form and 'password' in request.form:
+    if request.method == 'POST' :
+    # and 'email' in request.form and 'password' in request.form:
         res={}
-        username = request.form['email']
-        password = request.form['password']
+        username = request.json['email']
+        password = request.json['password']
         hash = password + app.secret_key
         hash = hashlib.sha1(hash.encode())
         password = hash.hexdigest()
@@ -204,25 +205,26 @@ def user_auth():
             session['loggedin'] = True
             session['id'] = account['email']
             session['username'] = account['password']
-            return {"resp":"logged in Successfully"}
+            return {"IsAuthenticated":"true"}
         else: 
-            return   {"resp":"Invalid Username/Password"}
+            return   {"IsAuthneticated":"false","ErrorMessage":"Invalid Username/Password"}
 
 @app.route('/register',methods=['POST'])
 def register():
 
     try:
-        if request.method == 'POST'  and 'email' in request.form and 'password' in request.form and "firstname" in request.form and "lastname" in request.form:
-            __email=request.form['email']
-            __password=request.form['password']
-            __firstname=request.form['firstname']
-            __lastname=request.form['lastname']
+        if request.method == 'POST': 
+        # and 'email' in request.form and 'password' in request.form and "firstname" in request.form and "lastname" in request.form:
+            __email=request.json['email']
+            __password=request.json['password']
+            __firstname=request.json['firstname']
+            __lastname=request.json['lastname']
             conn = mysql.connect()
             cursor = conn.cursor(pymysql.cursors.DictCursor)
             cursor.execute('SELECT * FROM users WHERE email = %s', (__email,))
             account = cursor.fetchone()
             if account:
-                return {"resp":"Account is Already exists!"}
+                return {"Response":"Account is Already exists!"}
                
             else:
                 hash = __password + app.secret_key
@@ -234,9 +236,9 @@ def register():
                 conn.commit()
                 cursor.close()
                 conn.close()
-                return {"resp":"Successfully Registered!!"}
-        elif request.method == 'POST':
-                return {"resp":"Please Fill out the form!!"}
+                return {"Response":"Successfully Registered!!"}
+        elif request.method == 'POSTX':
+                return {"Response":"Please Fill out the form!!"}
     except Exception as e:
         print(e)
     finally:
