@@ -163,14 +163,12 @@ def gpt():
     #res.headers.add("Access-Control-Allow-Origin", "*")
     return res
 
-@app.route('/getreview',methods=['GET'])
-def get_review():
+@app.route('/getreview/<string:email>',methods=['GET'])
+def get_review(email):
     try:
         conn = mysql.connect()
         cursor = conn.cursor(pymysql.cursors.DictCursor)
-        __json=request.json
-        __id=__json['email']
-        cursor.execute("SELECT * FROM REVIEW WHERE EMAIL=%s",__id)
+        cursor.execute("SELECT * FROM REVIEW WHERE EMAIL=%s ORDER BY review_id DESC",email)
         reviewrows = cursor.fetchall()
         response = jsonify(reviewrows)
         cursor.close()
@@ -254,6 +252,11 @@ def get_trends():
     sqlQuery='SELECT *FROM REVIEW WHERE EMAIL=%s ORDER BY TIME_AND_DATE DESC LIMIT 5 '
     cursor.execute(sqlQuery,(__email))
     data=cursor.fetchall()
+    print(data)
+    print(type(data))
+    for list_data in data:
+        list_data['accuracy']=list_data['accuracy'][:-1]
+    print(data)
     if data:
         cursor.close()
         conn.close()

@@ -6,4 +6,5 @@ cors = CORS(app, resources={
     r"/gpt": {"origins": ["http://localhost:3000", "http://127.0.0.1:3000"]},
     r"/login": {"origins": ["http://localhost:3000", "http://127.0.0.1:3000"]},
     r"/register": {"origins": ["http://localhost:3000", "http://127.0.0.1:3000"]},
+    r"/trends": {"origins": ["http://localhost:3000", "http://127.0.0.1:3000"]},
 })
