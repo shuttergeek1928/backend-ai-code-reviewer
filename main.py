@@ -244,7 +244,28 @@ def register():
     finally:
         print("executing Finally")    
 
-
+@app.route('/trends',methods=['POST'])
+def get_trends():
+   try: 
+    __json=request.json
+    __email=__json["email"]
+    conn = mysql.connect()
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
+    sqlQuery='SELECT *FROM REVIEW WHERE EMAIL=%s ORDER BY TIME_AND_DATE DESC LIMIT 5 '
+    cursor.execute(sqlQuery,(__email))
+    data=cursor.fetchall()
+    if data:
+        cursor.close()
+        conn.close()
+        res=jsonify(data)
+        res.status_code=200
+        return res
+    else:
+        return {"resp": "data is not available for the user"}
+   except Exception as e:
+       print(e)
+   finally:
+       print("executing finally")
 
 
 
@@ -258,6 +279,7 @@ def showMessage(error=None):
     respone = jsonify(message)
     respone.status_code = 404
     return respone
+
 
 
 if __name__== "__main__":
