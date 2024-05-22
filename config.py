@@ -1,6 +1,7 @@
 from app import app
 import flaskext.mysql
 
+app.secret_key = "code_review"
 mysql = flaskext.mysql.MySQL()
 app.config['MYSQL_DATABASE_USER'] = 'root'
 app.config['MYSQL_DATABASE_PASSWORD'] = 'Password1!'
