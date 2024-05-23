@@ -8,6 +8,8 @@ import datetime as dt
 import json
 import re, hashlib
 from flask_cors import CORS, cross_origin
+from email.mime.text import MIMEText
+import smtplib
 
 def store_code_review(email,inputCode,language,correctedCode,explain,accuracy,raw_res):
     try:
@@ -29,6 +31,21 @@ def store_code_review(email,inputCode,language,correctedCode,explain,accuracy,ra
         print(e)
     finally:
         print("coooodee")
+def send_email(email):
+    s=smtplib.SMTP('smtp.gmail.com', 587)
+    s.starttls()
+    s.login("aiwarlocks78@gmail.com", "ibfn kvzc yspo dfoz")
+    #url="http://localhost:5000/resetpass"
+
+   
+    message = """<pre> HI,
+     Link to reset password:- <a href="http://localhost:5000/resetpass"> Reset Password </a>
+     </pre>"""
+    msg=MIMEText(message, 'html')
+    s.sendmail("aiwarlocks78@gmail.com",email, msg.as_string())
+    print(message)
+    s.quit()
+    
 
 
 @app.route('/create', methods=['POST'])
@@ -269,6 +286,62 @@ def get_trends():
        print(e)
    finally:
        print("executing finally")
+       
+ 
+@app.route('/forgetpass',methods=['POST'])
+def sendEmail():
+    try:
+        __json=request.json
+        __email=__json["email"]
+        conn = mysql.connect()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        sqlQuery="SELECT *FROM USERS WHERE EMAIL=%s"
+        cursor.execute(sqlQuery,(__email))
+        result=cursor.fetchone()
+        if result:
+            send_email(__email)
+            return {"response":"Mail is sent to registed email ID Kindly check the mail!!"}
+        else:
+            return {"response":"Mail id is not registered Kindly Register the mail!"}
+    except Exception as e:
+       print(e)
+    finally:
+       print("executing finally")
+
+
+@app.route('/resetpass',methods=['POST'])
+def resetPass():
+    try:
+
+        json=request.json
+        __email=request.json['email']
+        __new_pass=request.json['password']
+        conn = mysql.connect()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        sqlquery="SELECT *FROM USERS WHERE EMAIL=%s"
+        cursor.execute(sqlquery,(__email))
+        result=cursor.fetchone()
+        cursor.close()
+        conn.close()
+        if result:
+            conn = mysql.connect()
+            cursor =conn.cursor(pymysql.cursors.DictCursor)
+            hash=__new_pass + app.secret_key
+            hash =hashlib.sha1(hash.encode())
+            password= hash.hexdigest()
+            sqlquery2="UPDATE USERS SET PASSWORD=%s WHERE EMAIL=%s"
+            cursor.execute(sqlquery2, (password,__email))
+            result= cursor.fetchall()
+            conn.commit()
+            cursor.close()
+            conn.close()
+            return({"response":"Password is updated Successfully"})
+        else:
+            return ({"response":"User Not Found!!"})
+    except Exception as e:
+       print(e)
+    finally:
+       print("executing finally")       
 
 
 
